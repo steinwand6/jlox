@@ -30,7 +30,7 @@ class Scanner {
     }
 
     private boolean isAtEnd() {
-        return this.line >= source.length();
+        return this.current >= source.length();
     }
 
     private void scanToken() {
