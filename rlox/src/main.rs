@@ -8,35 +8,58 @@ fn main() {
     if args().len() > 2 {
         println!("Usage: rlox [script]");
     } else if args().len() == 2 {
-        run_file(args().nth(1).unwrap());
+        let mut lox = Lox::new();
+        lox.run_file(args().nth(1).unwrap());
     } else {
-        run_prompt();
+        let mut lox = Lox::new();
+        lox.run_prompt();
     }
 }
 
-fn run_file(file_name: String) {
-    let file = File::open(file_name).expect("open file");
-    let mut reader = BufReader::new(file);
-    let mut buffer = String::new();
-    reader.read_to_string(&mut buffer).expect("read file");
-    run(&buffer);
+struct Lox {
+    had_error: bool,
 }
 
-fn run_prompt() {
-    let mut buffer = String::new();
+impl Lox {
+    fn new() -> Self {
+        Self { had_error: false }
+    }
 
-    loop {
-        buffer.clear();
-        print!("> ");
-        io::stdout().flush().expect("flush");
-        io::stdin().read_line(&mut buffer).expect("read line");
-        if buffer.is_empty() {
-            return;
+    fn run_file(&mut self, file_name: String) {
+        let file = File::open(file_name).expect("open file");
+        let mut reader = BufReader::new(file);
+        let mut buffer = String::new();
+        reader.read_to_string(&mut buffer).expect("read file");
+        &self.run(&buffer);
+    }
+
+    fn run_prompt(&mut self) {
+        let mut buffer = String::new();
+
+        loop {
+            buffer.clear();
+            print!("> ");
+            io::stdout().flush().expect("flush");
+            io::stdin().read_line(&mut buffer).expect("read line");
+            if buffer.is_empty() {
+                return;
+            }
+            self.run(&buffer);
+
+            self.had_error = false;
         }
-        run(&buffer);
     }
-}
 
-fn run(src: &str) {
-    println!("{}", src.trim());
+    fn run(&mut self, src: &str) {
+        println!("{}", src.trim());
+    }
+
+    fn error(&mut self, line: usize, message: &str) {
+        self.report(line, "", message);
+    }
+
+    fn report(&mut self, line: usize, place: &str, message: &str) {
+        eprintln!("[line {}] Error {}: {}", line, place, message);
+        self.had_error = true;
+    }
 }
