@@ -92,11 +92,27 @@ impl<'a> Scanner<'a> {
             ' ' | '\t' | '\r' => (),
             '\n' => self.line += 1,
 
+            '"' => self.string(),
+
             _ => self.tokens.push(Err(LoxError(
                 self.line,
                 "Unexpected character.".to_string(),
             ))),
         };
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            self.advance();
+        }
+        if self.is_at_end() {
+            self.tokens
+                .push(Err(LoxError(self.line, "Unterminated string.".to_string())));
+            return;
+        }
+        self.advance();
+        let value = self.source[self.start + 1..self.current - 1].to_string();
+        self.add_token_with_literal(TokenType::String, Object::STRING(value));
     }
 
     fn peek(&mut self) -> char {
