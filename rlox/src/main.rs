@@ -36,7 +36,7 @@ impl Lox {
         let mut reader = BufReader::new(file);
         let mut buffer = String::new();
         reader.read_to_string(&mut buffer).expect("read file");
-        &self.run(&buffer);
+        self.run(&buffer);
     }
 
     fn run_prompt(&mut self) {
