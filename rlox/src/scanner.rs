@@ -97,6 +97,8 @@ impl<'a> Scanner<'a> {
             _ => {
                 if c.is_digit(10) {
                     self.number()
+                } else if c.is_alphabetic() {
+                    self.identifier();
                 } else {
                     self.tokens.push(Err(LoxError(
                         self.line,
@@ -105,6 +107,18 @@ impl<'a> Scanner<'a> {
                 }
             }
         };
+    }
+
+    fn identifier(&mut self) {
+        while self.peek().is_ascii_alphanumeric() || self.peek() == '_' {
+            self.advance();
+        }
+        let text = self.source[self.start..self.current].to_string();
+        if let Some(keyword) = self.keywords(&text) {
+            self.add_token(keyword);
+        } else {
+            self.add_token_with_literal(TokenType::Identifier, Object::STRING(text));
+        }
     }
 
     fn number(&mut self) {
@@ -185,5 +199,27 @@ impl<'a> Scanner<'a> {
 
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
+    }
+
+    fn keywords(&self, identifier: &str) -> Option<TokenType> {
+        match identifier {
+            "and" => Some(TokenType::And),
+            "class" => Some(TokenType::Class),
+            "else" => Some(TokenType::Else),
+            "false" => Some(TokenType::False),
+            "for" => Some(TokenType::For),
+            "fun" => Some(TokenType::Fun),
+            "if" => Some(TokenType::If),
+            "nil" => Some(TokenType::Nil),
+            "or" => Some(TokenType::Or),
+            "print" => Some(TokenType::Print),
+            "return" => Some(TokenType::Return),
+            "super" => Some(TokenType::Super),
+            "this" => Some(TokenType::This),
+            "true" => Some(TokenType::True),
+            "Var" => Some(TokenType::Var),
+            "while" => Some(TokenType::While),
+            _ => None,
+        }
     }
 }
