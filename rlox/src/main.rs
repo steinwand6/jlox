@@ -4,6 +4,8 @@ use std::{
     io::{self, BufReader, Read, Write},
 };
 
+use scanner::Scanner;
+
 mod scanner;
 mod token;
 mod token_type;
@@ -55,7 +57,12 @@ impl Lox {
     }
 
     fn run(&mut self, src: &str) {
-        println!("{}", src.trim());
+        let mut scanner = Scanner::new(src);
+        let tokens = scanner.scan_tokens();
+
+        for token in tokens {
+            println!("{}", token);
+        }
     }
 
     fn error(&mut self, line: usize, message: &str) {

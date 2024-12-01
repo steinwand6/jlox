@@ -9,7 +9,7 @@ pub struct Token {
     line: usize,
 }
 
-enum Object {
+pub enum Object {
     STRING(String),
     NUM(f64),
     None,
@@ -26,9 +26,9 @@ impl Token {
     }
 }
 
-impl ToString for Token {
-    fn to_string(&self) -> String {
-        format!("{} {} {}", self.token_type, self.lexeme, self.literal)
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.token_type, self.lexeme, self.literal)
     }
 }
 
