@@ -80,6 +80,15 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenType::Greater);
                 }
             }
+            '/' => {
+                if self.match_token('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
             ' ' | '\t' | '\r' => (),
             '\n' => self.line += 1,
 
@@ -88,6 +97,13 @@ impl<'a> Scanner<'a> {
                 "Unexpected character.".to_string(),
             ))),
         };
+    }
+
+    fn peek(&mut self) -> char {
+        self.source
+            .chars()
+            .nth(self.current)
+            .expect("peek in scanner")
     }
 
     fn match_token(&mut self, expected: char) -> bool {
@@ -106,7 +122,7 @@ impl<'a> Scanner<'a> {
             .source
             .chars()
             .nth(self.current)
-            .expect("{} advance in scanner");
+            .expect("advance in scanner");
         self.current += 1;
         c
     }
