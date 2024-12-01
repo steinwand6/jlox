@@ -94,11 +94,41 @@ impl<'a> Scanner<'a> {
 
             '"' => self.string(),
 
-            _ => self.tokens.push(Err(LoxError(
-                self.line,
-                "Unexpected character.".to_string(),
-            ))),
+            _ => {
+                if c.is_digit(10) {
+                    self.number()
+                } else {
+                    self.tokens.push(Err(LoxError(
+                        self.line,
+                        "Unexpected character.".to_string(),
+                    )))
+                }
+            }
         };
+    }
+
+    fn number(&mut self) {
+        while (self.peek()).is_digit(10) {
+            self.advance();
+        }
+        if self.peek() == '.' && self.peek_next().is_digit(10) {
+            self.advance();
+            while self.peek().is_digit(10) {
+                self.advance();
+            }
+        }
+        let num: f64 = self.source[self.start..self.current].parse().unwrap();
+        self.add_token_with_literal(TokenType::Number, Object::NUM(num));
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            return '\0';
+        }
+        self.source
+            .chars()
+            .nth(self.current + 1)
+            .expect("peek_next in scanner")
     }
 
     fn string(&mut self) {
