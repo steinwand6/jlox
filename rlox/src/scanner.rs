@@ -1,3 +1,5 @@
+use crate::token::Token;
+
 pub struct Scanner {
     source: String,
     tokens: Vec<Token>,

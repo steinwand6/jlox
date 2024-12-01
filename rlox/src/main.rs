@@ -4,6 +4,10 @@ use std::{
     io::{self, BufReader, Read, Write},
 };
 
+mod scanner;
+mod token;
+mod token_type;
+
 fn main() {
     if args().len() > 2 {
         println!("Usage: rlox [script]");
