@@ -1,13 +1,12 @@
-use std::ops::Index;
-
 use crate::{
     token::{Object, Token},
     token_type::TokenType,
+    LoxError,
 };
 
 pub struct Scanner<'a> {
     source: &'a str,
-    tokens: Vec<Token>,
+    tokens: Vec<Result<Token, LoxError>>,
     start: usize,
     current: usize,
     line: usize,
@@ -24,18 +23,18 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub fn scan_tokens(&mut self) -> &Vec<Result<Token, LoxError>> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(
+        self.tokens.push(Ok(Token::new(
             TokenType::EOF,
             "".into(),
             Object::None,
             self.line,
-        ));
+        )));
         return &self.tokens;
     }
 
@@ -52,8 +51,15 @@ impl<'a> Scanner<'a> {
             '+' => self.add_token(TokenType::Plus),
             '*' => self.add_token(TokenType::Star),
             ';' => self.add_token(TokenType::SemiColon),
-            _ => (),
-        }
+
+            ' ' | '\t' | '\r' => (),
+            '\n' => self.line += 1,
+
+            _ => self.tokens.push(Err(LoxError(
+                self.line,
+                "Unexpected character.".to_string(),
+            ))),
+        };
     }
 
     fn advance(&mut self) -> char {
@@ -73,7 +79,7 @@ impl<'a> Scanner<'a> {
     fn add_token_with_literal(&mut self, token_type: TokenType, literal: Object) {
         let text = self.source[self.start..self.current].to_string();
         self.tokens
-            .push(Token::new(token_type, text, literal, self.line));
+            .push(Ok(Token::new(token_type, text, literal, self.line)));
     }
 
     fn is_at_end(&self) -> bool {

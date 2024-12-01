@@ -60,8 +60,18 @@ impl Lox {
         let mut scanner = Scanner::new(src);
         let tokens = scanner.scan_tokens();
 
-        for token in tokens {
-            println!("{}", token);
+        tokens
+            .iter()
+            .filter_map(|token| token.as_ref().err())
+            .for_each(|err| self.error(err.0, &err.1));
+
+        if !self.had_error {
+            for token in tokens {
+                match token {
+                    Ok(token) => println!("{}", token),
+                    Err(e) => eprintln!("{} {}", e.0, e.1),
+                }
+            }
         }
     }
 
@@ -74,3 +84,5 @@ impl Lox {
         self.had_error = true;
     }
 }
+
+pub struct LoxError(usize, String);
