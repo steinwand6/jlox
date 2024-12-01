@@ -95,6 +95,10 @@ class Scanner {
             case '\t':
                 break;
 
+            case '"':
+                string();
+                break;
+
             default:
                 if (isDigit(c)) {
                     number();
@@ -105,6 +109,24 @@ class Scanner {
                 }
                 break;
         }
+    }
+
+    private void string() {
+        while (peek() != '"' && !isAtEnd()) {
+            if (peek() != '\n')
+                line++;
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+        advance(); // 右側の引用符を消費
+
+        // 左右の引用符を切り捨てる
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
     }
 
     private char advance() {
