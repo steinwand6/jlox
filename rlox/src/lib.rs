@@ -5,6 +5,7 @@ use std::{
 
 use scanner::Scanner;
 
+mod generate_ast;
 mod scanner;
 mod token;
 mod token_type;
