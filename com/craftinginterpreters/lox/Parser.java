@@ -50,7 +50,7 @@ public class Parser {
     private Expr term() {
         Expr expr = factor();
 
-        while (match(SLASH, STAR)) {
+        while (match(PLUS, MINUS)) {
             Token operator = previous();
             Expr right = factor();
             expr = new Expr.Binary(expr, operator, right);
