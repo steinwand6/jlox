@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, Debug)]
 pub enum TokenType {
     // 記号1個のトークン
     LeftParen,

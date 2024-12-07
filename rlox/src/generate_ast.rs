@@ -4,13 +4,17 @@ use crate::token::{Object, Token};
 
 macro_rules! generate_ast {
     ($name:ident, [$( $varient:ident : {$($field:ident: $type:ty),*}),*]) => {
-        paste!{enum $name {
+        paste!{
+        #[derive(Debug, Clone)]
+        pub enum $name {
             $($varient([<$varient $name>]),)*
-        }}
+        }
+        }
 
 
         paste!{
-        $(struct [<$varient $name>] {
+        $(#[derive(Debug, Clone)]
+          pub struct [<$varient $name>] {
             $($field: $type,)*
         })*
         }

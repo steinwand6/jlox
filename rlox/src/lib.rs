@@ -3,9 +3,13 @@ use std::{
     io::{self, BufReader, Read, Write},
 };
 
+use generate_ast::Expr;
+use parser::Parser;
 use scanner::Scanner;
+use token::Token;
 
 mod generate_ast;
+mod parser;
 mod scanner;
 mod token;
 mod token_type;
@@ -53,13 +57,15 @@ impl Lox {
             .filter_map(|token| token.as_ref().err())
             .for_each(|err| self.error(err.0, &err.1));
 
-        if !self.had_error {
-            for token in tokens {
-                match token {
-                    Ok(token) => println!("{}", token),
-                    Err(e) => eprintln!("{} {}", e.0, e.1),
-                }
-            }
+        if self.had_error {
+            return;
+        }
+
+        let mut parser = Parser::new(tokens.iter().flatten().collect());
+        let expr = parser.parse();
+        match expr {
+            Ok(ref expr) => println!("{:?}", expr),
+            Err(e) => eprintln!("{:?}", e),
         }
     }
 
@@ -74,3 +80,5 @@ impl Lox {
 }
 
 pub struct LoxError(usize, String);
+#[derive(Debug)]
+pub struct LoxParseError(Token, String);
