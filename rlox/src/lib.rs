@@ -3,7 +3,6 @@ use std::{
     io::{self, BufReader, Read, Write},
 };
 
-use generate_ast::Expr;
 use parser::Parser;
 use scanner::Scanner;
 use token::Token;
@@ -85,7 +84,7 @@ impl Lox {
         } else {
             self.report(
                 parse_err.0.line,
-                &format!(" at '{}'", &parse_err.0.lexeme),
+                &format!("at '{}'", &parse_err.0.lexeme),
                 &parse_err.1,
             );
         }

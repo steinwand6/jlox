@@ -94,7 +94,12 @@ impl<'a> Parser<'a> {
                     Err(t) => return Err(LoxParseError(t, "Expecte ')' after expression.".into())),
                 }
             }
-            _ => unimplemented!(),
+            _ => {
+                return Err(LoxParseError(
+                    self.peek().clone(),
+                    "Expect expression.".into(),
+                ))
+            }
         };
         self.current += 1;
         Ok(Box::new(Expr::Literal(literal)))
