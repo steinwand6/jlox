@@ -7,6 +7,7 @@ use generate_ast::Expr;
 use parser::Parser;
 use scanner::Scanner;
 use token::Token;
+use token_type::TokenType;
 
 mod generate_ast;
 mod parser;
@@ -65,7 +66,7 @@ impl Lox {
         let expr = parser.parse();
         match expr {
             Ok(ref expr) => println!("{:?}", expr),
-            Err(e) => eprintln!("{:?}", e),
+            Err(e) => self.error_in_parse(e),
         }
     }
 
@@ -77,8 +78,20 @@ impl Lox {
         eprintln!("[line {}] Error {}: {}", line, place, message);
         self.had_error = true;
     }
+
+    fn error_in_parse(&mut self, parse_err: LoxParseError) {
+        if parse_err.0.token_type == TokenType::EOF {
+            self.report(parse_err.0.line, "at end", &parse_err.1);
+        } else {
+            self.report(
+                parse_err.0.line,
+                &format!(" at '{}'", &parse_err.0.lexeme),
+                &parse_err.1,
+            );
+        }
+    }
 }
 
-pub struct LoxError(usize, String);
+pub struct LoxScanError(usize, String);
 #[derive(Debug)]
 pub struct LoxParseError(Token, String);

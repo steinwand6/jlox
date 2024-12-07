@@ -1,12 +1,12 @@
 use crate::{
     token::{Object, Token},
     token_type::TokenType,
-    LoxError,
+    LoxScanError,
 };
 
 pub struct Scanner<'a> {
     source: &'a str,
-    tokens: Vec<Result<Token, LoxError>>,
+    tokens: Vec<Result<Token, LoxScanError>>,
     start: usize,
     current: usize,
     line: usize,
@@ -23,7 +23,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> &Vec<Result<Token, LoxError>> {
+    pub fn scan_tokens(&mut self) -> &Vec<Result<Token, LoxScanError>> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -100,7 +100,7 @@ impl<'a> Scanner<'a> {
                 } else if c.is_alphabetic() {
                     self.identifier();
                 } else {
-                    self.tokens.push(Err(LoxError(
+                    self.tokens.push(Err(LoxScanError(
                         self.line,
                         "Unexpected character.".to_string(),
                     )))
@@ -150,8 +150,10 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
         if self.is_at_end() {
-            self.tokens
-                .push(Err(LoxError(self.line, "Unterminated string.".to_string())));
+            self.tokens.push(Err(LoxScanError(
+                self.line,
+                "Unterminated string.".to_string(),
+            )));
             return;
         }
         self.advance();
