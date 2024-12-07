@@ -30,12 +30,12 @@ impl<'a> Scanner<'a> {
         }
 
         self.tokens.push(Ok(Token::new(
-            TokenType::EOF,
+            TokenType::Eof,
             "".into(),
             Object::None,
             self.line,
         )));
-        return &self.tokens;
+        &self.tokens
     }
 
     fn scan_token(&mut self) {
@@ -95,7 +95,7 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
 
             _ => {
-                if c.is_digit(10) {
+                if c.is_ascii_digit() {
                     self.number()
                 } else if c.is_alphabetic() {
                     self.identifier();
@@ -117,22 +117,22 @@ impl<'a> Scanner<'a> {
         if let Some(keyword) = self.keywords(&text) {
             self.add_token(keyword);
         } else {
-            self.add_token_with_literal(TokenType::Identifier, Object::STRING(text));
+            self.add_token_with_literal(TokenType::Identifier, Object::String(text));
         }
     }
 
     fn number(&mut self) {
-        while (self.peek()).is_digit(10) {
+        while (self.peek()).is_ascii_digit() {
             self.advance();
         }
-        if self.peek() == '.' && self.peek_next().is_digit(10) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             self.advance();
-            while self.peek().is_digit(10) {
+            while self.peek().is_ascii_digit() {
                 self.advance();
             }
         }
         let num: f64 = self.source[self.start..self.current].parse().unwrap();
-        self.add_token_with_literal(TokenType::Number, Object::NUM(num));
+        self.add_token_with_literal(TokenType::Number, Object::Num(num));
     }
 
     fn peek_next(&self) -> char {
@@ -158,7 +158,7 @@ impl<'a> Scanner<'a> {
         }
         self.advance();
         let value = self.source[self.start + 1..self.current - 1].to_string();
-        self.add_token_with_literal(TokenType::String, Object::STRING(value));
+        self.add_token_with_literal(TokenType::String, Object::String(value));
     }
 
     fn peek(&mut self) -> char {

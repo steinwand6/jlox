@@ -12,9 +12,9 @@ pub struct Token {
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub enum Object {
-    STRING(String),
-    NUM(f64),
-    BOOL(bool),
+    String(String),
+    Num(f64),
+    Bool(bool),
     None,
 }
 
@@ -38,9 +38,9 @@ impl Display for Token {
 impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            Object::STRING(s) => s.to_string(),
-            Object::NUM(n) => n.to_string(),
-            Object::BOOL(b) => b.to_string(),
+            Object::String(s) => s.to_string(),
+            Object::Num(n) => n.to_string(),
+            Object::Bool(b) => b.to_string(),
             Object::None => "[None]".to_string(),
         };
         write!(f, "{}", str)
@@ -50,14 +50,14 @@ impl Display for Object {
 impl Object {
     pub fn num(&self) -> Result<f64, ()> {
         match self {
-            Object::NUM(n) => Ok(*n),
+            Object::Num(n) => Ok(*n),
             _ => Err(()),
         }
     }
 
     pub fn str(&self) -> Result<String, ()> {
         match self {
-            Object::STRING(str) => Ok(str.into()),
+            Object::String(str) => Ok(str.into()),
             _ => Err(()),
         }
     }

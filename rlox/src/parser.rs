@@ -20,7 +20,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> Result<Box<Expr>, LoxParseError> {
-        return self.equality();
+        self.equality()
     }
 
     fn equality(&mut self) -> Result<Box<Expr>, LoxParseError> {
@@ -74,17 +74,17 @@ impl<'a> Parser<'a> {
             let right = self.unary()?;
             return Ok(Box::new(Expr::Unary(UnaryExpr::new(operator, right))));
         }
-        return self.primary();
+        self.primary()
     }
 
     fn primary(&mut self) -> Result<Box<Expr>, LoxParseError> {
         let literal = match self.peek().token_type {
-            TokenType::False => LiteralExpr::new(Object::BOOL(false)),
-            TokenType::True => LiteralExpr::new(Object::BOOL(true)),
+            TokenType::False => LiteralExpr::new(Object::Bool(false)),
+            TokenType::True => LiteralExpr::new(Object::Bool(true)),
             TokenType::Nil => LiteralExpr::new(Object::None),
-            TokenType::Number => LiteralExpr::new(Object::NUM(self.peek().literal.num().unwrap())),
+            TokenType::Number => LiteralExpr::new(Object::Num(self.peek().literal.num().unwrap())),
             TokenType::String => {
-                LiteralExpr::new(Object::STRING(self.peek().literal.str().unwrap()))
+                LiteralExpr::new(Object::String(self.peek().literal.str().unwrap()))
             }
             TokenType::LeftParen => {
                 self.current += 1;
@@ -106,7 +106,7 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&self) -> &Token {
-        self.tokens.iter().nth(self.current).unwrap()
+        self.tokens.get(self.current).unwrap()
     }
 
     fn match_type(&mut self, types: &[TokenType]) -> bool {
@@ -141,11 +141,11 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token_type == TokenType::EOF
+        self.peek().token_type == TokenType::Eof
     }
 
     fn previous(&self) -> Token {
-        let t = self.tokens.iter().nth(self.current - 1).unwrap();
+        let t = self.tokens.get(self.current - 1).unwrap();
         (**t).clone()
     }
 }

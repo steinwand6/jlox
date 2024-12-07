@@ -79,7 +79,7 @@ impl Lox {
     }
 
     fn error_in_parse(&mut self, parse_err: LoxParseError) {
-        if parse_err.0.token_type == TokenType::EOF {
+        if parse_err.0.token_type == TokenType::Eof {
             self.report(parse_err.0.line, "at end", &parse_err.1);
         } else {
             self.report(
@@ -88,6 +88,12 @@ impl Lox {
                 &parse_err.1,
             );
         }
+    }
+}
+
+impl Default for Lox {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
