@@ -15,7 +15,7 @@ macro_rules! generate_ast {
         paste!{
         $(#[derive(Debug, Clone)]
           pub struct [<$varient $name>] {
-            $($field: $type,)*
+            $(pub $field: $type,)*
         })*
         }
 

@@ -3,12 +3,14 @@ use std::{
     io::{self, BufReader, Read, Write},
 };
 
+use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
 use token::Token;
 use token_type::TokenType;
 
 mod generate_ast;
+mod interpreter;
 mod parser;
 mod scanner;
 mod token;
@@ -62,10 +64,18 @@ impl Lox {
         }
 
         let mut parser = Parser::new(tokens.iter().flatten().collect());
-        let expr = parser.parse();
-        match expr {
-            Ok(ref expr) => println!("{:?}", expr),
-            Err(e) => self.error_in_parse(e),
+        let expr = match parser.parse() {
+            Ok(expr) => expr,
+            Err(e) => {
+                self.error_in_parse(e);
+                return;
+            }
+        };
+
+        let interpreter = Interpreter::new();
+        match interpreter.interpret(&expr) {
+            Ok(_) => (),
+            Err(e) => self.error_in_interpret(e),
         }
     }
 
@@ -89,6 +99,11 @@ impl Lox {
             );
         }
     }
+
+    fn error_in_interpret(&mut self, runtime_err: LoxRuntimeError) {
+        eprintln!("{}", runtime_err.1);
+        eprintln!("[line {}]", runtime_err.0.line);
+    }
 }
 
 impl Default for Lox {
@@ -100,3 +115,5 @@ impl Default for Lox {
 pub struct LoxScanError(usize, String);
 #[derive(Debug)]
 pub struct LoxParseError(Token, String);
+
+pub struct LoxRuntimeError(Token, String);
