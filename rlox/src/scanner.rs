@@ -146,10 +146,10 @@ impl<'a> Scanner<'a> {
     }
 
     fn string(&mut self) {
-        while self.peek() != '"' && !self.is_at_end() {
+        while self.peek() != '"' && !self.is_at_end() && self.peek() != '\n' {
             self.advance();
         }
-        if self.is_at_end() {
+        if self.is_at_end() || self.peek() == '\n' {
             self.tokens.push(Err(LoxScanError(
                 self.line,
                 "Unterminated string.".to_string(),
