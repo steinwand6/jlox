@@ -219,7 +219,7 @@ impl<'a> Scanner<'a> {
             "super" => Some(TokenType::Super),
             "this" => Some(TokenType::This),
             "true" => Some(TokenType::True),
-            "Var" => Some(TokenType::Var),
+            "var" => Some(TokenType::Var),
             "while" => Some(TokenType::While),
             _ => None,
         }

@@ -36,13 +36,15 @@ generate_ast!(Expr,
         Binary : {left: Box<Expr>, operator: Token, right: Box<Expr>},
         Grouping : {expression: Box<Expr>},
         Literal : {value: Object},
-        Unary : {operator: Token, right: Box<Expr>}
+        Unary : {operator: Token, right: Box<Expr>},
+        Variable: {name: Token}
     ]
 );
 
 generate_ast!(Stmt,
     [
         Expression : {expression: Expr},
-        Print : {expression: Expr}
+        Print : {expression: Expr},
+        Var : {name: Token, initializer: Expr}
     ]
 );

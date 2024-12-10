@@ -1,6 +1,7 @@
 use crate::{
     generate_ast::{
         BinaryExpr, Expr, ExpressionStmt, GroupingExpr, LiteralExpr, PrintStmt, Stmt, UnaryExpr,
+        VarStmt, VariableExpr,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -20,10 +21,31 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxParseError> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration()?);
         }
 
         Ok(statements)
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, LoxParseError> {
+        if self.match_type(&[TokenType::Var]) {
+            return self.var_declaration();
+        }
+        self.statement()
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, LoxParseError> {
+        let name = self
+            .consume(&TokenType::Identifier)
+            .map_err(|t| LoxParseError(t, "Expect variable name.".into()))?;
+
+        let mut initializer = Box::new(Expr::Literal(LiteralExpr::new(Object::None)));
+        if self.match_type(&[TokenType::Equal]) {
+            initializer = self.expression()?;
+        }
+        self.consume(&TokenType::SemiColon)
+            .map_err(|t| LoxParseError(t, "Expect ';' after variable declaration.".into()))?;
+        Ok(Stmt::Var(VarStmt::new(name, *initializer)))
     }
 
     fn statement(&mut self) -> Result<Stmt, LoxParseError> {
@@ -35,6 +57,7 @@ impl<'a> Parser<'a> {
 
     fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {
         let value = self.expression()?;
+
         match self.consume(&TokenType::SemiColon) {
             Ok(_) => Ok(Stmt::Print(PrintStmt::new(*value))),
             Err(token) => Err(LoxParseError(token, "Expect ';' after value".into())),
@@ -123,6 +146,10 @@ impl<'a> Parser<'a> {
                     Ok(_) => return Ok(Box::new(Expr::Grouping(GroupingExpr::new(expr)))),
                     Err(t) => return Err(LoxParseError(t, "Expecte ')' after expression.".into())),
                 }
+            }
+            TokenType::Identifier => {
+                self.current += 1;
+                return Ok(Box::new(Expr::Variable(VariableExpr::new(self.previous()))));
             }
             _ => {
                 return Err(LoxParseError(self.advance(), "Expect expression.".into()));

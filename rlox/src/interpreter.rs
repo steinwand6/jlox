@@ -1,18 +1,23 @@
 use crate::{
+    environment::Environment,
     generate_ast::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
     token::{Object, Token},
     token_type::TokenType,
     LoxRuntimeError,
 };
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            environment: Environment::new(),
+        }
     }
 
-    pub fn interpret(&self, stmts: Vec<Stmt>) -> Result<(), LoxRuntimeError> {
+    pub fn interpret(&mut self, stmts: Vec<Stmt>) -> Result<(), LoxRuntimeError> {
         for stmt in stmts {
             self.execute_stmt(&stmt)?;
         }
@@ -20,7 +25,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_stmt(&self, stmt: &Stmt) -> Result<(), LoxRuntimeError> {
+    fn execute_stmt(&mut self, stmt: &Stmt) -> Result<(), LoxRuntimeError> {
         match stmt {
             Stmt::Expression(stmt) => {
                 self.evaluate_expr(&stmt.expression)?;
@@ -28,6 +33,10 @@ impl Interpreter {
             Stmt::Print(stmt) => {
                 let value = self.evaluate_expr(&stmt.expression)?;
                 println!("{}", self.strigify(&value));
+            }
+            Stmt::Var(stmt) => {
+                let value = self.evaluate_expr(&stmt.initializer)?;
+                self.environment.define(&stmt.name.lexeme, value);
             }
         }
         Ok(())
@@ -39,6 +48,7 @@ impl Interpreter {
             Expr::Grouping(expr) => self.evaluate_grouping(expr)?,
             Expr::Literal(expr) => self.evaluate_literal(expr)?,
             Expr::Unary(expr) => self.evaluate_unary(expr)?,
+            Expr::Variable(expr) => self.environment.get(&expr.name)?,
         };
         Ok(obj)
     }

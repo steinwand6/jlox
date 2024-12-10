@@ -9,6 +9,7 @@ use scanner::Scanner;
 use token::Token;
 use token_type::TokenType;
 
+mod environment;
 mod generate_ast;
 mod interpreter;
 mod parser;
@@ -18,11 +19,15 @@ mod token_type;
 
 pub struct Lox {
     had_error: bool,
+    interpreter: Interpreter,
 }
 
 impl Lox {
     pub fn new() -> Self {
-        Self { had_error: false }
+        Self {
+            had_error: false,
+            interpreter: Interpreter::new(),
+        }
     }
 
     pub fn run_file(&mut self, file_name: String) {
@@ -62,13 +67,10 @@ impl Lox {
         let mut parser = Parser::new(tokens.iter().flatten().collect());
         let stmts = parser.parse();
         match stmts {
-            Ok(stmts) => {
-                let interpreter = Interpreter::new();
-                match interpreter.interpret(stmts) {
-                    Ok(_) => (),
-                    Err(err) => self.error_in_interpret(err),
-                }
-            }
+            Ok(stmts) => match self.interpreter.interpret(stmts) {
+                Ok(_) => (),
+                Err(err) => self.error_in_interpret(err),
+            },
             Err(err) => {
                 self.error_in_parse(&err);
             }
