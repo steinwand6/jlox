@@ -71,8 +71,10 @@ impl Lox {
                 Ok(_) => (),
                 Err(err) => self.error_in_interpret(err),
             },
-            Err(err) => {
-                self.error_in_parse(&err);
+            Err(errors) => {
+                for err in errors {
+                    self.error_in_parse(&err);
+                }
             }
         }
     }

@@ -18,10 +18,20 @@ impl<'a> Parser<'a> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxParseError> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<LoxParseError>> {
         let mut statements = vec![];
+        let mut errors = vec![];
         while !self.is_at_end() {
-            statements.push(self.declaration()?);
+            match self.declaration() {
+                Ok(stmt) => statements.push(stmt),
+                Err(e) => {
+                    errors.push(e);
+                    self.synchronize();
+                }
+            }
+        }
+        if !errors.is_empty() {
+            return Err(errors);
         }
 
         Ok(statements)
@@ -201,5 +211,26 @@ impl<'a> Parser<'a> {
     fn previous(&self) -> Token {
         let t = self.tokens.get(self.current - 1).unwrap();
         (**t).clone()
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::SemiColon {
+                return;
+            }
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::For
+                | TokenType::Fun
+                | TokenType::If
+                | TokenType::Print
+                | TokenType::Return
+                | TokenType::Var
+                | TokenType::While => return,
+                _ => (),
+            }
+            self.advance();
+        }
     }
 }
