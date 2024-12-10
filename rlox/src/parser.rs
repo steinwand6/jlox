@@ -17,12 +17,13 @@ impl<'a> Parser<'a> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Vec<Result<Stmt, LoxParseError>> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, LoxParseError> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            statements.push(self.statement());
+            statements.push(self.statement()?);
         }
-        statements
+
+        Ok(statements)
     }
 
     fn statement(&mut self) -> Result<Stmt, LoxParseError> {
@@ -124,10 +125,7 @@ impl<'a> Parser<'a> {
                 }
             }
             _ => {
-                return Err(LoxParseError(
-                    self.peek().clone(),
-                    "Expect expression.".into(),
-                ))
+                return Err(LoxParseError(self.advance(), "Expect expression.".into()));
             }
         };
         self.current += 1;

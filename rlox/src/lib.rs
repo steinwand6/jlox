@@ -59,25 +59,19 @@ impl Lox {
             .filter_map(|token| token.as_ref().err())
             .for_each(|err| self.error(err.0, &err.1));
 
-        if self.had_error {
-            return;
-        }
-
         let mut parser = Parser::new(tokens.iter().flatten().collect());
         let stmts = parser.parse();
-        stmts
-            .iter()
-            .filter_map(|stmt| stmt.as_ref().err())
-            .for_each(|err| self.error_in_parse(err));
-        if self.had_error {
-            return;
-        }
-
-        let interpreter = Interpreter::new();
-        let stmts = stmts.iter().flatten().collect();
-        match interpreter.interpret(stmts) {
-            Ok(_) => (),
-            Err(err) => self.error_in_interpret(err),
+        match stmts {
+            Ok(stmts) => {
+                let interpreter = Interpreter::new();
+                match interpreter.interpret(stmts) {
+                    Ok(_) => (),
+                    Err(err) => self.error_in_interpret(err),
+                }
+            }
+            Err(err) => {
+                self.error_in_parse(&err);
+            }
         }
     }
 

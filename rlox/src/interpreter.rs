@@ -12,9 +12,9 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&self, stmts: Vec<&Stmt>) -> Result<(), LoxRuntimeError> {
+    pub fn interpret(&self, stmts: Vec<Stmt>) -> Result<(), LoxRuntimeError> {
         for stmt in stmts {
-            self.execute_stmt(stmt)?;
+            self.execute_stmt(&stmt)?;
         }
 
         Ok(())
