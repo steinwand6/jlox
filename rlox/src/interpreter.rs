@@ -27,7 +27,7 @@ impl Interpreter {
             }
             Stmt::Print(stmt) => {
                 let value = self.evaluate_expr(&stmt.expression)?;
-                println!("{:?}", value);
+                println!("{}", self.strigify(&value));
             }
         }
         Ok(())
@@ -150,6 +150,15 @@ impl Interpreter {
                 operator.clone(),
                 "Operand must be numbers.".into(),
             )),
+        }
+    }
+
+    fn strigify(&self, obj: &Object) -> String {
+        match obj {
+            Object::String(s) => s.into(),
+            Object::Bool(b) => b.to_string(),
+            Object::Num(n) => n.to_string().replace(".0", ""),
+            Object::None => "nil".into(),
         }
     }
 }
