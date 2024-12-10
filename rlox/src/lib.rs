@@ -64,18 +64,20 @@ impl Lox {
         }
 
         let mut parser = Parser::new(tokens.iter().flatten().collect());
-        let expr = match parser.parse() {
-            Ok(expr) => expr,
-            Err(e) => {
-                self.error_in_parse(e);
-                return;
-            }
-        };
+        let stmts = parser.parse();
+        stmts
+            .iter()
+            .filter_map(|stmt| stmt.as_ref().err())
+            .for_each(|err| self.error_in_parse(err));
+        if self.had_error {
+            return;
+        }
 
         let interpreter = Interpreter::new();
-        match interpreter.interpret(&expr) {
+        let stmts = stmts.iter().flatten().collect();
+        match interpreter.interpret(stmts) {
             Ok(_) => (),
-            Err(e) => self.error_in_interpret(e),
+            Err(err) => self.error_in_interpret(err),
         }
     }
 
@@ -88,7 +90,7 @@ impl Lox {
         self.had_error = true;
     }
 
-    fn error_in_parse(&mut self, parse_err: LoxParseError) {
+    fn error_in_parse(&mut self, parse_err: &LoxParseError) {
         if parse_err.0.token_type == TokenType::Eof {
             self.report(parse_err.0.line, "at end", &parse_err.1);
         } else {

@@ -1,5 +1,5 @@
 use crate::{
-    generate_ast::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
+    generate_ast::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
     token::{Object, Token},
     token_type::TokenType,
     LoxRuntimeError,
@@ -12,13 +12,28 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&self, expr: &Expr) -> Result<(), LoxRuntimeError> {
-        let result = self.evaluate(expr)?;
-        println!("{:?}", result);
+    pub fn interpret(&self, stmts: Vec<&Stmt>) -> Result<(), LoxRuntimeError> {
+        for stmt in stmts {
+            self.execute_stmt(stmt)?;
+        }
+
         Ok(())
     }
 
-    pub fn evaluate(&self, expr: &Expr) -> Result<Object, LoxRuntimeError> {
+    fn execute_stmt(&self, stmt: &Stmt) -> Result<(), LoxRuntimeError> {
+        match stmt {
+            Stmt::Expression(stmt) => {
+                self.evaluate_expr(&stmt.expression)?;
+            }
+            Stmt::Print(stmt) => {
+                let value = self.evaluate_expr(&stmt.expression)?;
+                println!("{:?}", value);
+            }
+        }
+        Ok(())
+    }
+
+    fn evaluate_expr(&self, expr: &Expr) -> Result<Object, LoxRuntimeError> {
         let obj = match expr {
             Expr::Binary(expr) => self.evaluate_binary(expr)?,
             Expr::Grouping(expr) => self.evaluate_grouping(expr)?,
@@ -29,8 +44,8 @@ impl Interpreter {
     }
 
     fn evaluate_binary(&self, expr: &BinaryExpr) -> Result<Object, LoxRuntimeError> {
-        let left = self.evaluate(&expr.left)?;
-        let right = self.evaluate(&expr.right)?;
+        let left = self.evaluate_expr(&expr.left)?;
+        let right = self.evaluate_expr(&expr.right)?;
 
         match expr.operator.token_type {
             TokenType::Plus => match (left, right) {
@@ -80,7 +95,7 @@ impl Interpreter {
     }
 
     fn evaluate_grouping(&self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeError> {
-        self.evaluate(&expr.expression)
+        self.evaluate_expr(&expr.expression)
     }
 
     fn evaluate_literal(&self, expr: &LiteralExpr) -> Result<Object, LoxRuntimeError> {
@@ -88,7 +103,7 @@ impl Interpreter {
     }
 
     fn evaluate_unary(&self, expr: &UnaryExpr) -> Result<Object, LoxRuntimeError> {
-        let right = self.evaluate(&expr.right)?;
+        let right = self.evaluate_expr(&expr.right)?;
 
         let obj = match expr.operator.token_type {
             TokenType::Bang => Object::Bool(!self.is_truthy(&right)),

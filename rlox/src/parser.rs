@@ -1,5 +1,7 @@
 use crate::{
-    generate_ast::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
+    generate_ast::{
+        BinaryExpr, Expr, ExpressionStmt, GroupingExpr, LiteralExpr, PrintStmt, Stmt, UnaryExpr,
+    },
     token::{Object, Token},
     token_type::TokenType,
     LoxParseError,
@@ -15,8 +17,35 @@ impl<'a> Parser<'a> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Box<Expr>, LoxParseError> {
-        self.expression()
+    pub fn parse(&mut self) -> Vec<Result<Stmt, LoxParseError>> {
+        let mut statements = vec![];
+        while !self.is_at_end() {
+            statements.push(self.statement());
+        }
+        statements
+    }
+
+    fn statement(&mut self) -> Result<Stmt, LoxParseError> {
+        if self.match_type(&[TokenType::Print]) {
+            return self.print_statement();
+        }
+        self.expression_statement()
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        let value = self.expression()?;
+        match self.consume(&TokenType::SemiColon) {
+            Ok(_) => Ok(Stmt::Print(PrintStmt::new(*value))),
+            Err(token) => Err(LoxParseError(token, "Expect ';' after value".into())),
+        }
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        let expr = self.expression()?;
+        match self.consume(&TokenType::SemiColon) {
+            Ok(_) => Ok(Stmt::Expression(ExpressionStmt::new(*expr))),
+            Err(token) => Err(LoxParseError(token, "Expect ';' after expression".into())),
+        }
     }
 
     fn expression(&mut self) -> Result<Box<Expr>, LoxParseError> {
