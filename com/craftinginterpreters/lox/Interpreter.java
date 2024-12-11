@@ -18,6 +18,13 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Object visitAssignExpr(Assign expr) {
+        Object value = evaluate(expr.value);
+        environment.assign(expr.name.lexeme, value);
+        return value;
+    }
+
+    @Override
     public Object visitBinaryExpr(Binary expr) {
         Object left = evaluate(expr.left);
         Object right = evaluate(expr.right);
