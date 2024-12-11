@@ -46,4 +46,10 @@ public class AstPrinter implements Expr.Visitor<String> {
     public String visitVariableExpr(Variable expr) {
         return parenthesize(expr.name.lexeme, expr);
     }
+
+    @Override
+    public String visitAssignExpr(Assign expr) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'visitAssignExpr'");
+    }
 }
