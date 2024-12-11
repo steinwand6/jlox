@@ -1,7 +1,7 @@
 use crate::{
     generate_ast::{
-        BinaryExpr, Expr, ExpressionStmt, GroupingExpr, LiteralExpr, PrintStmt, Stmt, UnaryExpr,
-        VarStmt, VariableExpr,
+        AssignExpr, BinaryExpr, Expr, ExpressionStmt, GroupingExpr, LiteralExpr, PrintStmt, Stmt,
+        UnaryExpr, VarStmt, VariableExpr,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -83,7 +83,24 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> Result<Box<Expr>, LoxParseError> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Box<Expr>, LoxParseError> {
+        let expr = self.equality()?;
+
+        if self.match_type(&[TokenType::Equal]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+
+            match *expr {
+                Expr::Variable(var) => {
+                    return Ok(Box::new(Expr::Assign(AssignExpr::new(var.name, value))));
+                }
+                _ => return Err(LoxParseError(equals, "Invalid assignment target.".into())),
+            }
+        }
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Box<Expr>, LoxParseError> {

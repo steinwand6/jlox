@@ -33,6 +33,7 @@ macro_rules! generate_ast {
 
 generate_ast!(Expr,
     [
+        Assign : {name: Token, value: Box<Expr>},
         Binary : {left: Box<Expr>, operator: Token, right: Box<Expr>},
         Grouping : {expression: Box<Expr>},
         Literal : {value: Object},

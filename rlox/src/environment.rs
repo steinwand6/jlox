@@ -16,8 +16,8 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: &str, value: Object) {
-        self.values.insert(name.into(), value);
+    pub fn define(&mut self, name: &str, value: &Object) {
+        self.values.insert(name.into(), value.clone());
     }
 
     pub fn get(&self, name: &Token) -> Result<Object, LoxRuntimeError> {
@@ -28,5 +28,17 @@ impl Environment {
                 format!("Undefined variable '{}'.", name.lexeme),
             )),
         }
+    }
+
+    pub fn assign(&mut self, name: &Token, value: &Object) -> Result<(), LoxRuntimeError> {
+        if self.values.contains_key(&name.lexeme) {
+            self.values.insert(name.lexeme.clone(), value.clone());
+        } else {
+            return Err(LoxRuntimeError(
+                name.clone(),
+                format!("Undefined variable '{}'.", name.lexeme),
+            ));
+        }
+        Ok(())
     }
 }

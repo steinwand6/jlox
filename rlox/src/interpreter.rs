@@ -1,6 +1,6 @@
 use crate::{
     environment::Environment,
-    generate_ast::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
+    generate_ast::{AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
     token::{Object, Token},
     token_type::TokenType,
     LoxRuntimeError,
@@ -36,14 +36,15 @@ impl Interpreter {
             }
             Stmt::Var(stmt) => {
                 let value = self.evaluate_expr(&stmt.initializer)?;
-                self.environment.define(&stmt.name.lexeme, value);
+                self.environment.define(&stmt.name.lexeme, &value);
             }
         }
         Ok(())
     }
 
-    fn evaluate_expr(&self, expr: &Expr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_expr(&mut self, expr: &Expr) -> Result<Object, LoxRuntimeError> {
         let obj = match expr {
+            Expr::Assign(expr) => self.evaluate_assign(expr)?,
             Expr::Binary(expr) => self.evaluate_binary(expr)?,
             Expr::Grouping(expr) => self.evaluate_grouping(expr)?,
             Expr::Literal(expr) => self.evaluate_literal(expr)?,
@@ -53,7 +54,13 @@ impl Interpreter {
         Ok(obj)
     }
 
-    fn evaluate_binary(&self, expr: &BinaryExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_assign(&mut self, expr: &AssignExpr) -> Result<Object, LoxRuntimeError> {
+        let value = self.evaluate_expr(&expr.value)?;
+        self.environment.assign(&expr.name, &value)?;
+        Ok(value)
+    }
+
+    fn evaluate_binary(&mut self, expr: &BinaryExpr) -> Result<Object, LoxRuntimeError> {
         let left = self.evaluate_expr(&expr.left)?;
         let right = self.evaluate_expr(&expr.right)?;
 
@@ -104,7 +111,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_grouping(&self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_grouping(&mut self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeError> {
         self.evaluate_expr(&expr.expression)
     }
 
@@ -112,7 +119,7 @@ impl Interpreter {
         Ok(expr.value.clone())
     }
 
-    fn evaluate_unary(&self, expr: &UnaryExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_unary(&mut self, expr: &UnaryExpr) -> Result<Object, LoxRuntimeError> {
         let right = self.evaluate_expr(&expr.right)?;
 
         let obj = match expr.operator.token_type {
