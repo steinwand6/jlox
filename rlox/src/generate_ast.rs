@@ -44,6 +44,7 @@ generate_ast!(Expr,
 
 generate_ast!(Stmt,
     [
+        Block : {statements: Vec<Stmt>},
         Expression : {expression: Expr},
         Print : {expression: Expr},
         Var : {name: Token, initializer: Expr}

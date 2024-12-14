@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     environment::Environment,
     generate_ast::{AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
@@ -29,6 +31,14 @@ impl Interpreter {
         match stmt {
             Stmt::Expression(stmt) => {
                 self.evaluate_expr(&stmt.expression)?;
+            }
+            Stmt::Block(stmt) => {
+                let previous = self.environment.clone();
+                self.environment = Environment::new_enclosing(Rc::new(self.environment.clone()));
+                for s in &stmt.statements {
+                    self.execute_stmt(s)?;
+                }
+                self.environment = previous;
             }
             Stmt::Print(stmt) => {
                 let value = self.evaluate_expr(&stmt.expression)?;

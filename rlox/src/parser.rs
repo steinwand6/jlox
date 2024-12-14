@@ -1,7 +1,7 @@
 use crate::{
     generate_ast::{
-        AssignExpr, BinaryExpr, Expr, ExpressionStmt, GroupingExpr, LiteralExpr, PrintStmt, Stmt,
-        UnaryExpr, VarStmt, VariableExpr,
+        AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, LiteralExpr,
+        PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -62,6 +62,9 @@ impl<'a> Parser<'a> {
         if self.match_type(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.match_type(&[TokenType::LeftBrace]) {
+            return Ok(Stmt::Block(BlockStmt::new(self.block_statement()?)));
+        }
         self.expression_statement()
     }
 
@@ -71,6 +74,17 @@ impl<'a> Parser<'a> {
         match self.consume(&TokenType::SemiColon) {
             Ok(_) => Ok(Stmt::Print(PrintStmt::new(*value))),
             Err(token) => Err(LoxParseError(token, "Expect ';' after value".into())),
+        }
+    }
+
+    fn block_statement(&mut self) -> Result<Vec<Stmt>, LoxParseError> {
+        let mut statements = vec![];
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+        match self.consume(&TokenType::RightBrace) {
+            Ok(_) => Ok(statements),
+            Err(t) => Err(LoxParseError(t, "Expected '}' after block.".into())),
         }
     }
 

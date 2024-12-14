@@ -62,3 +62,12 @@ impl Environment {
         Ok(())
     }
 }
+
+impl Clone for Environment {
+    fn clone(&self) -> Self {
+        Self {
+            values: self.values.clone(),
+            enclosing: self.enclosing.clone(),
+        }
+    }
+}
