@@ -3,6 +3,7 @@ package com.craftinginterpreters.lox;
 import java.util.List;
 
 import com.craftinginterpreters.lox.Expr.*;
+import com.craftinginterpreters.lox.Stmt.*;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
@@ -140,6 +141,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch);
+        } else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
@@ -198,4 +209,5 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             return;
         throw new RuntimeError(operator, "Operands must be numbers.");
     }
+
 }
