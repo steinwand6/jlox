@@ -32,6 +32,14 @@ impl Interpreter {
             Stmt::Expression(stmt) => {
                 self.evaluate_expr(&stmt.expression)?;
             }
+            Stmt::If(stmt) => {
+                let condition = self.evaluate_expr(&stmt.condition)?;
+                if self.is_truthy(&condition) {
+                    self.execute_stmt(&stmt.then_branch)?;
+                } else if let Some(b) = &stmt.else_branch {
+                    self.execute_stmt(b)?;
+                }
+            }
             Stmt::Block(stmt) => {
                 let previous = self.environment.clone();
                 self.environment = Environment::new_enclosing(Rc::new(self.environment.clone()));

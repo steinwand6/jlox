@@ -1,6 +1,6 @@
 use crate::{
     generate_ast::{
-        AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, LiteralExpr,
+        AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, IfStmt, LiteralExpr,
         PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr,
     },
     token::{Object, Token},
@@ -62,10 +62,28 @@ impl<'a> Parser<'a> {
         if self.match_type(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.match_type(&[TokenType::If]) {
+            return self.if_statement();
+        }
         if self.match_type(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt::new(self.block_statement()?)));
         }
         self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        self.consume(&TokenType::LeftParen)
+            .map_err(|t| LoxParseError(t, "Expect '(' after 'if'.".into()))?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::RightParen)
+            .map_err(|t| LoxParseError(t, "Expect ')' after if condition.".into()))?;
+
+        let then_branch = Box::new(self.statement()?);
+        let mut else_branch = None;
+        if self.match_type(&[TokenType::Else]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+        Ok(Stmt::If(IfStmt::new(*condition, then_branch, else_branch)))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {
