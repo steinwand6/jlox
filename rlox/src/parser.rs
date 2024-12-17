@@ -1,7 +1,7 @@
 use crate::{
     generate_ast::{
         AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, IfStmt, LiteralExpr,
-        PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr,
+        PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr, WhileStmt,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -65,6 +65,9 @@ impl<'a> Parser<'a> {
         if self.match_type(&[TokenType::If]) {
             return self.if_statement();
         }
+        if self.match_type(&[TokenType::While]) {
+            return self.while_statement();
+        }
         if self.match_type(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt::new(self.block_statement()?)));
         }
@@ -84,6 +87,18 @@ impl<'a> Parser<'a> {
             else_branch = Some(Box::new(self.statement()?));
         }
         Ok(Stmt::If(IfStmt::new(*condition, then_branch, else_branch)))
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        self.consume(&TokenType::LeftParen)
+            .map_err(|t| LoxParseError(t, "Expect '(' after 'while'.".into()))?;
+        let condition = self.expression()?;
+        self.consume(&TokenType::RightParen)
+            .map_err(|t| LoxParseError(t, "Expect ')' after while condition.".into()))?;
+
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While(WhileStmt::new(*condition, body)))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {

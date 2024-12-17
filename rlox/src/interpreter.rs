@@ -33,11 +33,15 @@ impl Interpreter {
                 self.evaluate_expr(&stmt.expression)?;
             }
             Stmt::If(stmt) => {
-                let condition = self.evaluate_expr(&stmt.condition)?;
-                if self.is_truthy(&condition) {
+                if Self::is_truthy(&self.evaluate_expr(&stmt.condition)?) {
                     self.execute_stmt(&stmt.then_branch)?;
                 } else if let Some(b) = &stmt.else_branch {
                     self.execute_stmt(b)?;
+                }
+            }
+            Stmt::While(stmt) => {
+                while Self::is_truthy(&self.evaluate_expr(&stmt.condition)?) {
+                    self.execute_stmt(&stmt.body)?;
                 }
             }
             Stmt::Block(stmt) => {
@@ -141,7 +145,7 @@ impl Interpreter {
         let right = self.evaluate_expr(&expr.right)?;
 
         let obj = match expr.operator.token_type {
-            TokenType::Bang => Object::Bool(!self.is_truthy(&right)),
+            TokenType::Bang => Object::Bool(!Self::is_truthy(&right)),
             TokenType::Minus => {
                 let num = self.check_number_operand(&expr.operator, &right)?;
                 Object::Num(-num)
@@ -151,7 +155,7 @@ impl Interpreter {
         Ok(obj)
     }
 
-    fn is_truthy(&self, obj: &Object) -> bool {
+    fn is_truthy(obj: &Object) -> bool {
         match obj {
             Object::Bool(b) => *b,
             Object::None => false,
