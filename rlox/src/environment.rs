@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{
     token::{Object, Token},
@@ -7,7 +7,7 @@ use crate::{
 
 pub struct Environment {
     values: HashMap<String, Object>,
-    enclosing: Option<Rc<Environment>>,
+    enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
@@ -18,10 +18,10 @@ impl Environment {
         }
     }
 
-    pub fn new_enclosing(enclosing: Rc<Environment>) -> Self {
+    pub fn new_enclosing(enclosing: Environment) -> Self {
         Self {
             values: HashMap::new(),
-            enclosing: Some(enclosing),
+            enclosing: Some(Box::new(enclosing)),
         }
     }
 
@@ -45,21 +45,22 @@ impl Environment {
     pub fn assign(&mut self, name: &Token, value: &Object) -> Result<(), LoxRuntimeError> {
         if self.values.contains_key(&name.lexeme) {
             self.values.insert(name.lexeme.clone(), value.clone());
-        } else {
-            match &self.enclosing {
-                Some(enclosing) => match enclosing.get(name) {
-                    Ok(_) => self.define(&name.lexeme, value),
-                    Err(e) => return Err(e),
-                },
-                None => {
-                    return Err(LoxRuntimeError(
-                        name.clone(),
-                        format!("Undefined variable '{}'.", name.lexeme),
-                    ))
-                }
-            }
+            return Ok(());
         }
-        Ok(())
+        if let Some(enclosing) = &mut self.enclosing {
+            enclosing.assign(name, value)?;
+        }
+        Err(LoxRuntimeError(
+            name.clone(),
+            format!("Undefined variable '{}'.", name.lexeme),
+        ))
+    }
+
+    pub fn exit_scope(&self) -> Option<Environment> {
+        if let Some(enclosing) = &self.enclosing {
+            return Some(*enclosing.clone());
+        }
+        None
     }
 }
 
