@@ -1,9 +1,10 @@
 package com.craftinginterpreters.lox;
 
+import static com.craftinginterpreters.lox.TokenType.OR;
+
 import java.util.List;
 
 import com.craftinginterpreters.lox.Expr.*;
-import com.craftinginterpreters.lox.Stmt.*;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
@@ -82,6 +83,20 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitLiteralExpr(Literal expr) {
         return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Logical expr) {
+        Object left = evaluate(expr.left);
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left))
+                return left;
+
+        } else {
+            if (!isTruthy(left))
+                return left;
+        }
+        return evaluate(expr.right);
     }
 
     @Override

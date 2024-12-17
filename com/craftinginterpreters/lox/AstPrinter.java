@@ -52,4 +52,10 @@ public class AstPrinter implements Expr.Visitor<String> {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'visitAssignExpr'");
     }
+
+    @Override
+    public String visitLogicalExpr(Logical expr) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'visitLogicalExpr'");
+    }
 }
