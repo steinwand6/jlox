@@ -1,6 +1,8 @@
 use crate::{
     environment::Environment,
-    generate_ast::{AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, Stmt, UnaryExpr},
+    generate_ast::{
+        AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, Stmt, UnaryExpr,
+    },
     token::{Object, Token},
     token_type::TokenType,
     LoxRuntimeError,
@@ -69,6 +71,7 @@ impl Interpreter {
             Expr::Literal(expr) => self.evaluate_literal(expr)?,
             Expr::Unary(expr) => self.evaluate_unary(expr)?,
             Expr::Variable(expr) => self.environment.get(&expr.name)?,
+            Expr::Logical(expr) => self.evaluate_logical(expr)?,
         };
         Ok(obj)
     }
@@ -150,6 +153,19 @@ impl Interpreter {
             _ => unimplemented!(),
         };
         Ok(obj)
+    }
+
+    fn evaluate_logical(&mut self, expr: &LogicalExpr) -> Result<Object, LoxRuntimeError> {
+        let left = self.evaluate_expr(&expr.left)?;
+        if Self::is_truthy(&left) {
+            if expr.operator.token_type == TokenType::Or {
+                return Ok(left);
+            }
+        } else if expr.operator.token_type == TokenType::And {
+            return Ok(left);
+        }
+
+        self.evaluate_expr(&expr.right)
     }
 
     fn is_truthy(obj: &Object) -> bool {

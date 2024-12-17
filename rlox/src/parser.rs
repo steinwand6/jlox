@@ -1,7 +1,7 @@
 use crate::{
     generate_ast::{
         AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, IfStmt, LiteralExpr,
-        PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr, WhileStmt,
+        LogicalExpr, PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr, WhileStmt,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Result<Box<Expr>, LoxParseError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_type(&[TokenType::Equal]) {
             let equals = self.previous();
@@ -146,6 +146,26 @@ impl<'a> Parser<'a> {
                 }
                 _ => return Err(LoxParseError(equals, "Invalid assignment target.".into())),
             }
+        }
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Box<Expr>, LoxParseError> {
+        let mut expr = self.and()?;
+        while self.match_type(&[TokenType::Or]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Box::new(Expr::Logical(LogicalExpr::new(expr, operator, right)));
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Box<Expr>, LoxParseError> {
+        let mut expr = self.equality()?;
+        while self.match_type(&[TokenType::And]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = Box::new(Expr::Logical(LogicalExpr::new(expr, operator, right)));
         }
         Ok(expr)
     }
