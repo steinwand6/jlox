@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     environment::Environment,
     generate_ast::{
@@ -45,11 +47,17 @@ impl Interpreter {
                 }
             }
             Stmt::Block(stmt) => {
-                self.environment = Environment::new_enclosing(self.environment.clone());
-                for s in &stmt.statements {
-                    self.execute_stmt(s)?;
+                let previous = Rc::new(RefCell::new(self.environment.clone()));
+                {
+                    let previous_ref = previous.clone();
+                    self.environment = Environment::new_enclosing(previous_ref);
+                    for s in &stmt.statements {
+                        self.execute_stmt(s)?;
+                    }
                 }
-                self.environment = self.environment.exit_scope().unwrap();
+                self.environment.drop_enclosing();
+                let previous = Rc::try_unwrap(previous).unwrap().into_inner();
+                self.environment = previous;
             }
             Stmt::Print(stmt) => {
                 let value = self.evaluate_expr(&stmt.expression)?;
