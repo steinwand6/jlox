@@ -68,6 +68,9 @@ impl<'a> Parser<'a> {
         if self.match_type(&[TokenType::While]) {
             return self.while_statement();
         }
+        if self.match_type(&[TokenType::For]) {
+            return self.for_statement();
+        }
         if self.match_type(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt::new(self.block_statement()?)));
         }
@@ -99,6 +102,53 @@ impl<'a> Parser<'a> {
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While(WhileStmt::new(*condition, body)))
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        self.consume(&TokenType::LeftParen)
+            .map_err(|t| LoxParseError(t, "Expect '(' after 'for'.".into()))?;
+
+        let initializer;
+        if self.check(&TokenType::SemiColon) {
+            initializer = None;
+        } else if self.match_type(&[TokenType::Var]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = Some(self.expression_statement()?);
+        }
+        let mut condition = None;
+        if !self.check(&TokenType::SemiColon) {
+            condition = Some(self.expression()?);
+        }
+        self.consume(&TokenType::SemiColon)
+            .map_err(|t| LoxParseError(t, "Expect ';' after loop condition.".into()))?;
+
+        let mut increment = None;
+        if !self.check(&TokenType::SemiColon) {
+            increment = Some(self.expression()?);
+        }
+        self.consume(&TokenType::RightParen)
+            .map_err(|t| LoxParseError(t, "Expect ')' after for closure.".into()))?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block(BlockStmt::new(vec![
+                body,
+                Stmt::Expression(ExpressionStmt::new(*increment)),
+            ]));
+        }
+        if let Some(condition) = condition {
+            body = Stmt::While(WhileStmt::new(*condition, Box::new(body)));
+        } else {
+            let condition = Expr::Literal(LiteralExpr::new(Object::Bool(true)));
+            body = Stmt::While(WhileStmt::new(condition, Box::new(body)));
+        }
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(BlockStmt::new(vec![initializer, body]));
+        }
+
+        Ok(body)
     }
 
     fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {
