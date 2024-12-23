@@ -1,10 +1,7 @@
 package com.craftinginterpreters.lox;
 
-import static com.craftinginterpreters.lox.TokenType.OR;
-
+import java.util.ArrayList;
 import java.util.List;
-
-import com.craftinginterpreters.lox.Expr.*;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
@@ -20,14 +17,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Object visitAssignExpr(Assign expr) {
+    public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
         environment.assign(expr.name, value);
         return value;
     }
 
     @Override
-    public Object visitBinaryExpr(Binary expr) {
+    public Object visitBinaryExpr(Expr.Binary expr) {
         Object left = evaluate(expr.left);
         Object right = evaluate(expr.right);
 
@@ -76,17 +73,30 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Object visitGroupingExpr(Grouping expr) {
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+        for (Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+
+        LoxCallable function = (LoxCallable) callee;
+        return function.call(this, arguments);
+    }
+
+    @Override
+    public Object visitGroupingExpr(Expr.Grouping expr) {
         return evaluate(expr.expression);
     }
 
     @Override
-    public Object visitLiteralExpr(Literal expr) {
+    public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
     }
 
     @Override
-    public Object visitLogicalExpr(Logical expr) {
+    public Object visitLogicalExpr(Expr.Logical expr) {
         Object left = evaluate(expr.left);
         if (expr.operator.type == TokenType.OR) {
             if (isTruthy(left))
@@ -100,7 +110,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Object visitUnaryExpr(Unary expr) {
+    public Object visitUnaryExpr(Expr.Unary expr) {
         Object right = evaluate(expr.right);
 
         switch (expr.operator.type) {
@@ -118,7 +128,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Object visitVariableExpr(Variable expr) {
+    public Object visitVariableExpr(Expr.Variable expr) {
         return environment.get(expr.name);
     }
 
