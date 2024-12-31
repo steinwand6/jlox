@@ -156,7 +156,19 @@ impl Interpreter {
         }
 
         match &callee {
-            Object::Fun(fun) => Ok(self.call(arguments, *fun.clone())?),
+            Object::Fun(fun) => {
+                if arguments.len() != callee.arity().unwrap() {
+                    return Err(LoxRuntimeError(
+                        expr.paren.clone(),
+                        format!(
+                            "Expected {} arguments but got {}.",
+                            callee.arity().unwrap(),
+                            arguments.len()
+                        ),
+                    ));
+                }
+                Ok(self.call(arguments, *fun.clone())?)
+            }
             _ => Err(LoxRuntimeError(
                 expr.paren.clone(),
                 "Can only call functions and classes.".into(),

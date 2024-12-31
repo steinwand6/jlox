@@ -69,4 +69,11 @@ impl Object {
             _ => Err(()),
         }
     }
+
+    pub fn arity(&self) -> Result<usize, ()> {
+        match self {
+            Object::Fun(stmt) => Ok(stmt.params.len()),
+            _ => Err(()),
+        }
+    }
 }
