@@ -1,7 +1,8 @@
 use crate::{
     generate_ast::{
-        AssignExpr, BinaryExpr, BlockStmt, Expr, ExpressionStmt, GroupingExpr, IfStmt, LiteralExpr,
-        LogicalExpr, PrintStmt, Stmt, UnaryExpr, VarStmt, VariableExpr, WhileStmt,
+        AssignExpr, BinaryExpr, BlockStmt, CallExpr, Expr, ExpressionStmt, FunctionStmt,
+        GroupingExpr, IfStmt, LiteralExpr, LogicalExpr, PrintStmt, Stmt, UnaryExpr, VarStmt,
+        VariableExpr, WhileStmt,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -38,10 +39,48 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&mut self) -> Result<Stmt, LoxParseError> {
+        if self.match_type(&[TokenType::Fun]) {
+            return self.function();
+        }
         if self.match_type(&[TokenType::Var]) {
             return self.var_declaration();
         }
         self.statement()
+    }
+
+    fn function(&mut self) -> Result<Stmt, LoxParseError> {
+        let name = self
+            .consume(&TokenType::Identifier)
+            .map_err(|t| LoxParseError(t, "Expect function name.".into()))?;
+        let mut params = vec![];
+
+        self.consume(&TokenType::LeftParen)
+            .map_err(|t| LoxParseError(t, "Expect '(' after function name.".into()))?;
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    return Err(LoxParseError(
+                        self.peek().clone(),
+                        "Cant't have more than 255 parameters.".into(),
+                    ));
+                }
+                params.push(
+                    self.consume(&TokenType::Identifier)
+                        .map_err(|t| LoxParseError(t, "Expect parameter name.".into()))?,
+                );
+                if !self.match_type(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(&TokenType::RightParen)
+            .map_err(|t| LoxParseError(t, "Expect ')' after parameters.".into()))?;
+
+        self.consume(&TokenType::LeftBrace)
+            .map_err(|t| LoxParseError(t, "Expect '{' before function body.".into()))?;
+        let body = self.block_statement()?;
+
+        Ok(Stmt::Function(FunctionStmt::new(name, params, body)))
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, LoxParseError> {
@@ -271,7 +310,45 @@ impl<'a> Parser<'a> {
             let right = self.unary()?;
             return Ok(Box::new(Expr::Unary(UnaryExpr::new(operator, right))));
         }
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Box<Expr>, LoxParseError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_type(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Box<Expr>) -> Result<Box<Expr>, LoxParseError> {
+        let mut arguments = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                arguments.push(*self.expression()?);
+                if arguments.len() >= 255 {
+                    return Err(LoxParseError(
+                        self.peek().clone(),
+                        "Can't have more than 255 arguments.".into(),
+                    ));
+                }
+                if !self.match_type(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        match self.consume(&TokenType::RightParen) {
+            Ok(paren) => Ok(Box::new(Expr::Call(CallExpr::new(
+                callee, paren, arguments,
+            )))),
+            Err(token) => Err(LoxParseError(token, "Expect ')' after arguments.".into())),
+        }
     }
 
     fn primary(&mut self) -> Result<Box<Expr>, LoxParseError> {

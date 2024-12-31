@@ -3,7 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     environment::Environment,
     generate_ast::{
-        AssignExpr, BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, Stmt, UnaryExpr,
+        AssignExpr, BinaryExpr, CallExpr, Expr, FunctionStmt, GroupingExpr, LiteralExpr,
+        LogicalExpr, Stmt, UnaryExpr,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -46,6 +47,10 @@ impl Interpreter {
                     self.execute_stmt(&stmt.body)?;
                 }
             }
+            Stmt::Function(stmt) => {
+                self.environment
+                    .define(&stmt.name.lexeme, &Object::Fun(Box::new(stmt.clone())));
+            }
             Stmt::Block(stmt) => {
                 let previous = Rc::new(RefCell::new(self.environment.clone()));
                 {
@@ -75,6 +80,7 @@ impl Interpreter {
         let obj = match expr {
             Expr::Assign(expr) => self.evaluate_assign(expr)?,
             Expr::Binary(expr) => self.evaluate_binary(expr)?,
+            Expr::Call(expr) => self.evaluate_call(expr)?,
             Expr::Grouping(expr) => self.evaluate_grouping(expr)?,
             Expr::Literal(expr) => self.evaluate_literal(expr)?,
             Expr::Unary(expr) => self.evaluate_unary(expr)?,
@@ -139,6 +145,41 @@ impl Interpreter {
             TokenType::EqualEqual => Ok(Object::Bool(left == right)),
             _ => unimplemented!(),
         }
+    }
+
+    fn evaluate_call(&mut self, expr: &CallExpr) -> Result<Object, LoxRuntimeError> {
+        let callee = self.evaluate_expr(&expr.callee)?;
+        let mut arguments = vec![];
+
+        for arg in &expr.arguments {
+            arguments.push(self.evaluate_expr(arg)?);
+        }
+
+        match &callee {
+            Object::Fun(fun) => Ok(self.call(arguments, *fun.clone())?),
+            _ => Err(LoxRuntimeError(
+                expr.paren.clone(),
+                "Can only call functions and classes.".into(),
+            )),
+        }
+    }
+
+    fn call(&mut self, params: Vec<Object>, fun: FunctionStmt) -> Result<Object, LoxRuntimeError> {
+        let previous = Rc::new(RefCell::new(self.environment.clone()));
+        {
+            let previous_ref = previous.clone();
+            self.environment = Environment::new_enclosing(previous_ref);
+            for (i, param) in params.iter().enumerate() {
+                self.environment.define(&fun.params[i].lexeme, param);
+            }
+            for s in fun.body {
+                self.execute_stmt(&s)?;
+            }
+        }
+        self.environment.drop_enclosing();
+        let previous = Rc::try_unwrap(previous).unwrap().into_inner();
+        self.environment = previous;
+        Ok(Object::None)
     }
 
     fn evaluate_grouping(&mut self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeError> {
@@ -218,6 +259,7 @@ impl Interpreter {
             Object::String(s) => s.into(),
             Object::Bool(b) => b.to_string(),
             Object::Num(n) => n.to_string().replace(".0", ""),
+            Object::Fun(stmt) => stmt.name.lexeme.to_string(),
             Object::None => "nil".into(),
         }
     }

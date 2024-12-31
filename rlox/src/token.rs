@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use crate::token_type::TokenType;
+use crate::{generate_ast::FunctionStmt, token_type::TokenType};
 
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -10,12 +10,19 @@ pub struct Token {
     pub line: usize,
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Object {
     String(String),
     Num(f64),
     Bool(bool),
+    Fun(Box<FunctionStmt>),
     None,
+}
+
+impl PartialEq for FunctionStmt {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.params == other.params
+    }
 }
 
 impl Token {
@@ -41,6 +48,7 @@ impl Display for Object {
             Object::String(s) => s.to_string(),
             Object::Num(n) => n.to_string(),
             Object::Bool(b) => b.to_string(),
+            Object::Fun(stmt) => stmt.name.to_string(),
             Object::None => "[None]".to_string(),
         };
         write!(f, "{}", str)
