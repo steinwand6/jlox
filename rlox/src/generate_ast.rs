@@ -51,6 +51,7 @@ generate_ast!(Stmt,
         Function : {name: Token, params: Vec<Token>, body: Vec<Stmt>},
         If : {condition: Expr, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>},
         Print : {expression: Expr},
+        Return : {_keyword: Token, value: Option<Expr>},
         While : {condition: Expr, body: Box<Stmt>},
         Var : {name: Token, initializer: Expr}
     ]

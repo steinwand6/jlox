@@ -1,8 +1,8 @@
 use crate::{
     generate_ast::{
         AssignExpr, BinaryExpr, BlockStmt, CallExpr, Expr, ExpressionStmt, FunctionStmt,
-        GroupingExpr, IfStmt, LiteralExpr, LogicalExpr, PrintStmt, Stmt, UnaryExpr, VarStmt,
-        VariableExpr, WhileStmt,
+        GroupingExpr, IfStmt, LiteralExpr, LogicalExpr, PrintStmt, ReturnStmt, Stmt, UnaryExpr,
+        VarStmt, VariableExpr, WhileStmt,
     },
     token::{Object, Token},
     token_type::TokenType,
@@ -110,6 +110,9 @@ impl<'a> Parser<'a> {
         if self.match_type(&[TokenType::For]) {
             return self.for_statement();
         }
+        if self.match_type(&[TokenType::Return]) {
+            return self.return_statement();
+        }
         if self.match_type(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt::new(self.block_statement()?)));
         }
@@ -188,6 +191,18 @@ impl<'a> Parser<'a> {
         }
 
         Ok(body)
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, LoxParseError> {
+        let keyword = self.previous();
+        let mut value = None;
+
+        if !self.check(&TokenType::SemiColon) {
+            value = Some(*self.expression()?);
+        }
+        self.consume(&TokenType::SemiColon)
+            .map_err(|token| LoxParseError(token, "Expect ';' after return value.".into()))?;
+        Ok(Stmt::Return(ReturnStmt::new(keyword, value)))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, LoxParseError> {

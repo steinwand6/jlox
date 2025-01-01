@@ -11,6 +11,23 @@ use crate::{
     LoxRuntimeError,
 };
 
+pub enum LoxRuntimeException {
+    Err(LoxRuntimeError),
+    Return(Object),
+}
+
+impl LoxRuntimeException {
+    fn throw_err(token: Token, message: &str) -> Result<Object, Self> {
+        Err(Self::Err(LoxRuntimeError(token, message.into())))
+    }
+}
+
+impl From<LoxRuntimeError> for LoxRuntimeException {
+    fn from(value: LoxRuntimeError) -> Self {
+        LoxRuntimeException::Err(value)
+    }
+}
+
 pub struct Interpreter {
     environment: Environment,
 }
@@ -24,13 +41,15 @@ impl Interpreter {
 
     pub fn interpret(&mut self, stmts: Vec<Stmt>) -> Result<(), LoxRuntimeError> {
         for stmt in stmts {
-            self.execute_stmt(&stmt)?;
+            if let Err(LoxRuntimeException::Err(err)) = self.execute_stmt(&stmt) {
+                return Err(err);
+            }
         }
 
         Ok(())
     }
 
-    fn execute_stmt(&mut self, stmt: &Stmt) -> Result<(), LoxRuntimeError> {
+    fn execute_stmt(&mut self, stmt: &Stmt) -> Result<(), LoxRuntimeException> {
         match stmt {
             Stmt::Expression(stmt) => {
                 self.evaluate_expr(&stmt.expression)?;
@@ -64,6 +83,13 @@ impl Interpreter {
                 let previous = Rc::try_unwrap(previous).unwrap().into_inner();
                 self.environment = previous;
             }
+            Stmt::Return(stmt) => {
+                let value = match &stmt.value {
+                    Some(expr) => self.evaluate_expr(expr)?,
+                    None => Object::None,
+                };
+                return Err(LoxRuntimeException::Return(value));
+            }
             Stmt::Print(stmt) => {
                 let value = self.evaluate_expr(&stmt.expression)?;
                 println!("{}", self.strigify(&value));
@@ -76,7 +102,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn evaluate_expr(&mut self, expr: &Expr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_expr(&mut self, expr: &Expr) -> Result<Object, LoxRuntimeException> {
         let obj = match expr {
             Expr::Assign(expr) => self.evaluate_assign(expr)?,
             Expr::Binary(expr) => self.evaluate_binary(expr)?,
@@ -90,13 +116,13 @@ impl Interpreter {
         Ok(obj)
     }
 
-    fn evaluate_assign(&mut self, expr: &AssignExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_assign(&mut self, expr: &AssignExpr) -> Result<Object, LoxRuntimeException> {
         let value = self.evaluate_expr(&expr.value)?;
         self.environment.assign(&expr.name, &value)?;
         Ok(value)
     }
 
-    fn evaluate_binary(&mut self, expr: &BinaryExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_binary(&mut self, expr: &BinaryExpr) -> Result<Object, LoxRuntimeException> {
         let left = self.evaluate_expr(&expr.left)?;
         let right = self.evaluate_expr(&expr.right)?;
 
@@ -106,10 +132,10 @@ impl Interpreter {
                     Ok(Object::String(format!("{}{}", left, right)))
                 }
                 (Object::Num(left), Object::Num(right)) => Ok(Object::Num(left + right)),
-                _ => Err(LoxRuntimeError(
+                _ => LoxRuntimeException::throw_err(
                     expr.operator.clone(),
-                    "Operands must be two numbers or two strings.".into(),
-                )),
+                    "Operands must be two numbers or two strings.",
+                ),
             },
             TokenType::Minus => {
                 let (a, b) = self.check_number_operands(&expr.operator, &left, &right)?;
@@ -147,7 +173,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_call(&mut self, expr: &CallExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_call(&mut self, expr: &CallExpr) -> Result<Object, LoxRuntimeException> {
         let callee = self.evaluate_expr(&expr.callee)?;
         let mut arguments = vec![];
 
@@ -158,25 +184,30 @@ impl Interpreter {
         match &callee {
             Object::Fun(fun) => {
                 if arguments.len() != callee.arity().unwrap() {
-                    return Err(LoxRuntimeError(
+                    return LoxRuntimeException::throw_err(
                         expr.paren.clone(),
                         format!(
                             "Expected {} arguments but got {}.",
                             callee.arity().unwrap(),
                             arguments.len()
-                        ),
-                    ));
+                        )
+                        .as_str(),
+                    );
                 }
                 Ok(self.call(arguments, *fun.clone())?)
             }
-            _ => Err(LoxRuntimeError(
+            _ => LoxRuntimeException::throw_err(
                 expr.paren.clone(),
-                "Can only call functions and classes.".into(),
-            )),
+                "Can only call functions and classes.",
+            ),
         }
     }
 
-    fn call(&mut self, params: Vec<Object>, fun: FunctionStmt) -> Result<Object, LoxRuntimeError> {
+    fn call(
+        &mut self,
+        params: Vec<Object>,
+        fun: FunctionStmt,
+    ) -> Result<Object, LoxRuntimeException> {
         let previous = Rc::new(RefCell::new(self.environment.clone()));
         {
             let previous_ref = previous.clone();
@@ -185,7 +216,19 @@ impl Interpreter {
                 self.environment.define(&fun.params[i].lexeme, param);
             }
             for s in fun.body {
-                self.execute_stmt(&s)?;
+                if let Err(exception) = self.execute_stmt(&s) {
+                    self.environment.drop_enclosing();
+                    let previous = Rc::try_unwrap(previous).unwrap().into_inner();
+                    self.environment = previous;
+                    match exception {
+                        LoxRuntimeException::Return(value) => {
+                            return Ok(value);
+                        }
+                        LoxRuntimeException::Err(err) => {
+                            return Err(LoxRuntimeException::from(err));
+                        }
+                    }
+                }
             }
         }
         self.environment.drop_enclosing();
@@ -194,7 +237,7 @@ impl Interpreter {
         Ok(Object::None)
     }
 
-    fn evaluate_grouping(&mut self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_grouping(&mut self, expr: &GroupingExpr) -> Result<Object, LoxRuntimeException> {
         self.evaluate_expr(&expr.expression)
     }
 
@@ -202,7 +245,7 @@ impl Interpreter {
         Ok(expr.value.clone())
     }
 
-    fn evaluate_unary(&mut self, expr: &UnaryExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_unary(&mut self, expr: &UnaryExpr) -> Result<Object, LoxRuntimeException> {
         let right = self.evaluate_expr(&expr.right)?;
 
         let obj = match expr.operator.token_type {
@@ -216,7 +259,7 @@ impl Interpreter {
         Ok(obj)
     }
 
-    fn evaluate_logical(&mut self, expr: &LogicalExpr) -> Result<Object, LoxRuntimeError> {
+    fn evaluate_logical(&mut self, expr: &LogicalExpr) -> Result<Object, LoxRuntimeException> {
         let left = self.evaluate_expr(&expr.left)?;
         if Self::is_truthy(&left) {
             if expr.operator.token_type == TokenType::Or {
