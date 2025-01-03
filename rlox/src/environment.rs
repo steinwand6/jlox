@@ -5,7 +5,7 @@ use crate::{
     LoxRuntimeError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Environment {
     values: HashMap<String, Object>,
     enclosing: Option<Rc<RefCell<Environment>>>,

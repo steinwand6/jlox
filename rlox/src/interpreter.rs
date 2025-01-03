@@ -67,8 +67,8 @@ impl Interpreter {
                 }
             }
             Stmt::Function(stmt) => {
-                self.environment
-                    .define(&stmt.name.lexeme, &Object::Fun(Box::new(stmt.clone())));
+                let fun = Object::Fun(Box::new(stmt.clone()), self.environment.clone());
+                self.environment.define(&stmt.name.lexeme, &fun);
             }
             Stmt::Block(stmt) => {
                 let previous = Rc::new(RefCell::new(self.environment.clone()));
@@ -174,7 +174,7 @@ impl Interpreter {
     }
 
     fn evaluate_call(&mut self, expr: &CallExpr) -> Result<Object, LoxRuntimeException> {
-        let callee = self.evaluate_expr(&expr.callee)?;
+        let mut callee = self.evaluate_expr(&expr.callee)?;
         let mut arguments = vec![];
 
         for arg in &expr.arguments {
@@ -182,7 +182,7 @@ impl Interpreter {
         }
 
         match &callee {
-            Object::Fun(fun) => {
+            Object::Fun(fun, _) => {
                 if arguments.len() != callee.arity().unwrap() {
                     return LoxRuntimeException::throw_err(
                         expr.paren.clone(),
@@ -194,7 +194,7 @@ impl Interpreter {
                         .as_str(),
                     );
                 }
-                Ok(self.call(arguments, *fun.clone())?)
+                Ok(self.call(arguments, *fun.clone(), callee.get_closure().unwrap())?)
             }
             _ => LoxRuntimeException::throw_err(
                 expr.paren.clone(),
@@ -207,18 +207,19 @@ impl Interpreter {
         &mut self,
         params: Vec<Object>,
         fun: FunctionStmt,
+        env: &mut Environment,
     ) -> Result<Object, LoxRuntimeException> {
-        let previous = Rc::new(RefCell::new(self.environment.clone()));
+        let previous = self.environment.clone();
+        let closure = Rc::new(RefCell::new(env.clone()));
         {
-            let previous_ref = previous.clone();
-            self.environment = Environment::new_enclosing(previous_ref);
+            let closure_ref = closure.clone();
+            self.environment = Environment::new_enclosing(closure_ref);
             for (i, param) in params.iter().enumerate() {
                 self.environment.define(&fun.params[i].lexeme, param);
             }
             for s in fun.body {
                 if let Err(exception) = self.execute_stmt(&s) {
                     self.environment.drop_enclosing();
-                    let previous = Rc::try_unwrap(previous).unwrap().into_inner();
                     self.environment = previous;
                     match exception {
                         LoxRuntimeException::Return(value) => {
@@ -232,7 +233,7 @@ impl Interpreter {
             }
         }
         self.environment.drop_enclosing();
-        let previous = Rc::try_unwrap(previous).unwrap().into_inner();
+
         self.environment = previous;
         Ok(Object::None)
     }
@@ -314,7 +315,7 @@ impl Interpreter {
             Object::String(s) => s.into(),
             Object::Bool(b) => b.to_string(),
             Object::Num(n) => n.to_string().replace(".0", ""),
-            Object::Fun(stmt) => stmt.name.lexeme.to_string(),
+            Object::Fun(stmt, _) => stmt.name.lexeme.to_string(),
             Object::None => "nil".into(),
         }
     }

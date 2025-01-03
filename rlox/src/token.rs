@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{generate_ast::FunctionStmt, token_type::TokenType};
+use crate::{environment::Environment, generate_ast::FunctionStmt, token_type::TokenType};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Token {
@@ -15,7 +15,7 @@ pub enum Object {
     String(String),
     Num(f64),
     Bool(bool),
-    Fun(Box<FunctionStmt>),
+    Fun(Box<FunctionStmt>, Environment),
     None,
 }
 
@@ -48,7 +48,7 @@ impl Display for Object {
             Object::String(s) => s.to_string(),
             Object::Num(n) => n.to_string(),
             Object::Bool(b) => b.to_string(),
-            Object::Fun(stmt) => stmt.name.to_string(),
+            Object::Fun(stmt, _) => stmt.name.to_string(),
             Object::None => "[None]".to_string(),
         };
         write!(f, "{}", str)
@@ -72,7 +72,14 @@ impl Object {
 
     pub fn arity(&self) -> Result<usize, ()> {
         match self {
-            Object::Fun(stmt) => Ok(stmt.params.len()),
+            Object::Fun(stmt, _) => Ok(stmt.params.len()),
+            _ => Err(()),
+        }
+    }
+
+    pub fn get_closure(&mut self) -> Result<&mut Environment, ()> {
+        match self {
+            Object::Fun(_, env) => Ok(env),
             _ => Err(()),
         }
     }
